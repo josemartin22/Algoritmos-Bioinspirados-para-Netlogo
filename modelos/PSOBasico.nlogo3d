@@ -1,19 +1,24 @@
-
 breed [ points point ]  ;; the points of the search space function
 breed [ particles particle ]  ;; agents (turtles) that move around the space
 
 globals [
-  w    ;; inertia
-  c1   ;; cognitive (personal)
-  c2   ;; social (global)
+  g-best-x
+  g-best-y
+  g-best-val
+  true-best-patch
 ]
 
 particles-own [
-  p-position      ; list of coordinates
-  p-velocity      ; list of velocities in each direction
+  vx
+  vy
+  p-best-x
+  p-best-y
+  p-best-val    ; best value of the particle
 ]
 
-patches-own [elevation]
+patches-own [
+  elevation     ; fitness value associated to each patch
+]
 
 
 ;; We evaluate the given points with the function
@@ -21,11 +26,7 @@ to-report objective-function [x y]
 
   ;; Sphere function
   let value  (x ^ 2 + y ^ 2)
-
-  ;let value (x ^ 2 + (y + 1) ^ 2 - 5 * (cos (1.5 * x + 1.5)) - 3 * (cos (2 * x - 1.5)))
   ;let value (-20 * exp(-0.2 * sqrt(0.5 * (x * x + y * y))) - exp(0.5 * (cos (2 * pi * x)) + (cos (2 * pi * y))) + e + 20)
-  ;let value (sin y) * e ^ ((1 - cos x) ^ 2) + (cos x) * e ^ ((1 - sin y) ^ 2) + (x - y) ^ 2
-
   report value
 end
 
@@ -38,20 +39,40 @@ to setup
     [
       create-random-search-space
     ]
-  [; Calculate the objective function to each pair of coordinates of patches
+  [
+    ; Calculate the objective function to each pair of coordinates of patches
     ask patches with [pzcor = 0] [set elevation (objective-function pxcor pycor)]
   ]
+
   draw-search-space
   initialize-particles
+  reset-ticks
 end
 
 
 to create-random-search-space
 
-  let peaks 30 + random 30  ; create 30-60 peaks
-  ask n-of peaks patches with [pzcor = 0 ] [ set elevation 50 + random 100 ]  ; 50-150 of elevation
+  ask n-of hills-number patches with [pzcor = 0 ] [ set elevation 50 + random 100 ]  ; 50-150 of elevation
   ; To smooth the landscape
-  repeat 10 [ diffuse elevation 1 ]
+  repeat landscape-smoothness [ diffuse elevation 1]
+
+  ask max-one-of patches [elevation]
+  [
+    set true-best-patch self
+  ]
+end
+
+
+;; turtle procedure to get the fitness (elevation)
+to-report get-elevation
+
+  ifelse random-search-space
+    ; We aproximate the coordinates of actual particle because we don't know
+    ; the fitness function, but we know the given random elevation
+    [report [elevation] of (patch (int xcor) (int ycor) 0)]
+
+  ; In case we don't use random search space, we report the exactly fitness value
+  [report objective-function xcor ycor]
 end
 
 
@@ -65,7 +86,7 @@ to draw-search-space
   [
     sprout-points 1
     [
-      create-links-with turtles-on neighbors
+      create-links-with points-on neighbors
       hide-turtle
     ]
   ]
@@ -77,24 +98,105 @@ to draw-search-space
   ]
 end
 
+
 to initialize-particles
 
   ; Set particles at random locations
-  ask n-of 50 patches
-  [
-    sprout-particles 1 [
-      set p-position []
-      set p-position lput (list pxcor pycor pzcor) p-position
-      show-turtle
-      set color red
-    ]
- ]
+  create-particles population-size [
+
+    ; particles have random initial coordinates and velocities
+    setxy random-xcor random-ycor
+
+    ; the starting point is the best particle's location
+    set p-best-x xcor
+    set p-best-y ycor
+
+    let z-elevation get-elevation
+    let max-elevation max [elevation] of patches
+    set zcor (z-elevation / max-elevation) * max-pzcor
+
+    set p-best-val z-elevation
+
+    set vx random-normal 0 1
+    set vy random-normal 0 1
+
+    ; aspect of particles
+    set color red
+    set shape "dot"
+    set size 2
+  ]
 end
+
 
 ;; Optimize through PSO
 to go
 
+  ask particles [
+
+    ; update the "personal best" location
+    let current-elevation get-elevation
+    if current-elevation > p-best-val
+    [
+      set p-best-val current-elevation
+      set p-best-x xcor
+      set p-best-y ycor
+    ]
+  ]
+
+  ; update the "global best" location
+  ask max-one-of particles [p-best-val]
+  [
+    if p-best-val > g-best-val
+    [
+      set g-best-val p-best-val
+      set g-best-x p-best-x
+      set g-best-y p-best-y
+    ]
+  ]
+
+  ; update the velocities and positions of each particle
+  ask particles
+  [
+    set vx particle-inertia * vx
+    set vy particle-inertia * vy
+
+    ; change my velocity by being attracted to the "personal best" value
+    facexy p-best-x p-best-y
+
+    let dist distancexy p-best-x p-best-y
+    set vx vx + (1 - particle-inertia) * attraction-to-personal-best * (random-float 1.0) * dist * dx
+    set vy vy + (1 - particle-inertia) * attraction-to-personal-best * (random-float 1.0) * dist * dy
+
+    ; change my velocity by being attracted to the "global best" value anyone has found so far
+    facexy g-best-x g-best-y
+    set dist distancexy g-best-x g-best-y
+    set vx vx + (1 - particle-inertia) * attraction-to-global-best * (random-float 1.0) * dist * dx
+    set vy vy + (1 - particle-inertia) * attraction-to-global-best * (random-float 1.0) * dist * dy
+
+    ; speed limits are particularly necessary because we are dealing with a toroidal (wrapping) world,
+    ; which means that particles can start warping around the world at ridiculous speeds
+    if (vx > particle-speed-limit) [ set vx particle-speed-limit ]
+    if (vx < 0 - particle-speed-limit) [ set vx 0 - particle-speed-limit ]
+    if (vy > particle-speed-limit) [ set vy particle-speed-limit ]
+    if (vy < 0 - particle-speed-limit) [ set vy 0 - particle-speed-limit ]
+
+    ; face in the direction of my velocity
+    facexy (xcor + vx) (ycor + vy)
+
+    ; and move forward by the magnitude of my velocity
+    forward sqrt (vx * vx + vy * vy)
+
+    ; set the zcor at visualization
+    let z-elevation get-elevation
+    let max-elevation max [elevation] of patches
+    set zcor (z-elevation / max-elevation) * max-pzcor
+  ]
+
+  tick
 end
+
+
+
 @#$#@#$#@
 GRAPHICS-WINDOW
 0
@@ -126,10 +228,10 @@ ticks
 30.0
 
 BUTTON
-42
-45
-142
-92
+241
+65
+343
+112
 NIL
 setup
 NIL
@@ -143,10 +245,10 @@ NIL
 1
 
 BUTTON
-158
-44
-261
-95
+240
+174
+343
+218
 NIL
 go
 T
@@ -160,15 +262,137 @@ NIL
 1
 
 SWITCH
-47
-139
-222
-172
+26
+71
+201
+104
 random-search-space
 random-search-space
-1
+0
 1
 -1000
+
+BUTTON
+241
+120
+343
+166
+step
+go
+NIL
+1
+T
+OBSERVER
+NIL
+NIL
+NIL
+NIL
+1
+
+SLIDER
+381
+48
+555
+81
+population-size
+population-size
+0
+100
+13.0
+1
+1
+NIL
+HORIZONTAL
+
+SLIDER
+381
+102
+553
+135
+particle-inertia
+particle-inertia
+0
+1
+0.9
+0.1
+1
+NIL
+HORIZONTAL
+
+SLIDER
+382
+142
+554
+175
+particle-speed-limit
+particle-speed-limit
+0
+20
+10.0
+1
+1
+NIL
+HORIZONTAL
+
+SLIDER
+383
+196
+584
+229
+attraction-to-personal-best
+attraction-to-personal-best
+0
+2
+2.0
+0.1
+1
+NIL
+HORIZONTAL
+
+SLIDER
+383
+234
+583
+267
+attraction-to-global-best
+attraction-to-global-best
+0
+2
+1.5
+0.1
+1
+NIL
+HORIZONTAL
+
+SLIDER
+26
+121
+202
+154
+landscape-smoothness
+landscape-smoothness
+4
+20
+16.0
+1
+1
+NIL
+HORIZONTAL
+
+SLIDER
+26
+167
+204
+200
+hills-number
+hills-number
+1
+100
+70.0
+1
+1
+NIL
+HORIZONTAL
 
 @#$#@#$#@
 ## WHAT IS IT?
