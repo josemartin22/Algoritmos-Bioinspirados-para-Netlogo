@@ -1,28 +1,67 @@
 ; GIS Reshaper online: https://mapshaper.org/
 
-extensions [ gis ]
+extensions [ gis rnd ]
 
 globals [
   provinces-dataset
+  provinces
+  showing-labels
   node-diameter
+  anthill
+  ; Best visited route
+  best-route
+  best-route-cost
 ]
 
 breed [province-labels province-label]
 breed [nodes node]
 
+; Each ant keep information about the visited route
+; and its cost
+breed [ants ant]
+ants-own [
+  route
+  cost
+]
+
+; Edges are represented by links between nodes. Each one keep
+; information about its lenght and level of pheromone deposited by ants
+links-own [
+  edge-cost
+  pheromone-level
+]
+
+
 to setup
   clear-all
-  ask patches [set pcolor white]
+  random-seed 123456789
 
-  ; Load coodinate system
-  let directory "prueba"
-  gis:load-coordinate-system (word "data/" directory "/provincias-espanolas.prj")
+  setup-background
+  setup-edges
+  setup-anthill
+  setup-ants
+
+  ; Random initial best known solution
+  set best-route generate-random-route
+  set best-route-cost (calculate-cost-of-route best-route)
+
+  update-display
+  update-best-route
+  reset-ticks
+end
+
+
+to setup-background
+
+  ask patches [set pcolor white]
+  ; Load coodinates system
+  gis:load-coordinate-system "data/provincias-espanolas.prj"
+
   ; Load datasets
-  set provinces-dataset gis:load-dataset (word "data/" directory "/provincias-espanolas.shp")
+  set provinces-dataset gis:load-dataset "data/provincias-espanolas.shp"
   gis:set-world-envelope-ds (gis:envelope-of provinces-dataset)
 
   display-provinces
-  reset-ticks
 end
 
 
@@ -34,7 +73,10 @@ to display-provinces
   gis:set-drawing-color [0 0 0 100]
   gis:draw provinces-dataset 0.5
 
-  foreach gis:feature-list-of provinces-dataset [
+  ; Select a subset of all provinces
+  set provinces (n-of num-provinces gis:feature-list-of provinces-dataset)
+
+  foreach provinces [
     vector-feature ->
     let centroid gis:location-of gis:centroid-of vector-feature
     if not empty? centroid
@@ -52,10 +94,12 @@ to display-provinces
         set ycoor ycor - 1
 
         ; Labeled provinces option
-        if label-provinces [
+        if-else label-provinces [
           set label gis:property-value vector-feature "TEXTO"
           set label-color [0 0 100 150]
+          set showing-labels true
         ]
+        [set showing-labels false]
       ]
       create-city xcoor ycoor
     ]
@@ -75,12 +119,244 @@ to create-city [xcoor ycoor]
     ]
   ]
 end
+
+
+to setup-edges
+  ask nodes [
+  ; Create links between nodes and set the cost and initial pheromone level
+    create-links-with other nodes [
+      set edge-cost link-length
+      set pheromone-level random-float 0.05
+      hide-link
+    ]
+  ]
+  ; Normalize by the highest edge length
+  ;let highest-cost (max [edge-cost] of links)
+  ;ask links [set edge-cost (edge-cost / highest-cost)]
+end
+
+
+to setup-anthill
+  ; Create the anthill (house) of the ants
+  set anthill one-of nodes
+  ask anthill [set shape "house" set size 3 set color brown]
+end
+
+
+to setup-ants
+  ; Create ants at the anthill
+  create-ants ants-population-size [
+    setxy [xcor] of anthill [ycor] of anthill
+    set shape "ant"
+    set color brown
+    set size 2
+    ; empty route at the beginning
+    set route []
+    set cost 0
+  ]
+end
+
+
+; Main procedure
+to go
+  ; ACO Algorithm
+  ask ants [
+    ; Each ant find a route and compair with the best known route
+    set route find-route
+    set cost calculate-cost-of-route route
+
+    if cost < best-route-cost [
+      set best-route-cost cost
+      set best-route route
+      update-best-route
+    ]
+  ]
+  if show-ants [
+    ask-concurrent ants [travel-route route]
+  ]
+  update-pheromone
+  update-display
+  tick
+end
+
+
+; Procedure to re-setup the present state of the model
+to reset
+  ask links [
+    hide-link
+    set pheromone-level random-float 0.05
+  ]
+
+  ask ants [die]
+  setup-ants
+  set best-route generate-random-route
+  set best-route-cost (calculate-cost-of-route best-route)
+
+  reset-ticks
+  update-best-route
+  update-display
+  clear-all-plots
+end
+
+
+; Procedure to generate a random circuit (route)
+to-report generate-random-route
+  ; Reorganizate the rest of nodes randomly
+  let list-nodes nodes with [self != anthill]
+  set list-nodes [self] of list-nodes
+  let random-route (shuffle list-nodes)
+
+  ; Close the route through anthill (last one with first one)
+  set random-route fput anthill random-route
+  set random-route (lput anthill random-route)
+
+  report random-route
+end
+
+
+; Procedure to find a circuit (route) that crosses every node
+to-report find-route
+  ; The anthill it's the first and last node to visit
+  let new-route (list anthill)
+  let remainder-nodes nodes with [self != anthill]
+  let current anthill
+
+  while [any? remainder-nodes]
+  [
+    ; https://ccl.northwestern.edu/netlogo/docs/rnd.html#rnd:weighted-one-of
+    let next-node rnd:weighted-one-of remainder-nodes [weight-to-node current]
+    set new-route (lput next-node new-route)
+
+    ; We extract the next node to visit
+    set remainder-nodes remainder-nodes with [self != next-node]
+    set current next-node
+  ]
+  ; Close the route with the anthill to create a circuit
+  set new-route (lput anthill new-route)
+
+  report new-route
+end
+
+
+; Calculate the length of a route
+to-report calculate-cost-of-route [given-route]
+  let route-cost 0
+  set route-cost (sum [edge-cost] of (get-edges given-route))
+  report route-cost
+end
+
+
+; Node (turtle) procedure to calculate the edge cost between them
+to-report weight-to-node [given-node]
+
+  ; Localization of the edge
+  let edge (link ([who] of self) ([who] of given-node))
+
+  ; Calculate the nominator of the edge selection probability by the ant
+  let p [pheromone-level] of edge
+  let c [edge-cost] of edge
+  ; Weight is the product of pheromone with visibility
+  let weight (p ^ alpha) * ((1 / c) ^ beta)
+
+  report weight
+end
+
+
+; Updates the world view
+to update-display
+
+  ; Show provinces labeled
+  if (label-provinces and not showing-labels)[
+    foreach provinces [
+      vector-feature -> let centroid gis:location-of gis:centroid-of vector-feature
+
+      create-province-labels 1 [
+        set size 0
+        ; Add 2 and 1 to avoid label overlapping with centroid
+        set xcor 2 + item 0 centroid
+        set ycor 1 + item 1 centroid
+        set label gis:property-value vector-feature "TEXTO"
+        set label-color [0 0 100 150]
+      ]
+    ]
+    set showing-labels true
+  ]
+  if (not label-provinces and showing-labels)[
+    ask province-labels [die]
+    set showing-labels false
+  ]
+
+  ; Show pheromone level over edges
+  if-else show-pheromone [
+    let max-pheromone max [pheromone-level] of links
+    ; Normalizate over the max value of pheromone
+    ask links [
+      show-link
+      set thickness (pheromone-level / max-pheromone)
+      set color lput (255 * pheromone-level / max-pheromone) [0 0 255]
+    ]
+  ]
+  [update-best-route]
+
+end
+
+; Show best known route at the world view
+to update-best-route
+  ; Show best known route
+  ask links [hide-link]
+
+  let best-route-edges (get-edges best-route)
+  ask best-route-edges [
+    show-link
+    set color red
+    set thickness 0.2
+  ]
+end
+
+; Procedure to update the level of pheromone at each edge
+to update-pheromone
+  ; Evaporate the pheromone of each edge and update the level of pheromone
+  ; of the edges visited by ants
+  ask links [set pheromone-level (pheromone-level * (1 - rho))]
+  ask ants [
+    let route-cost cost
+    ask (get-edges route) [
+      set pheromone-level (pheromone-level + (100 / route-cost))
+    ]
+  ]
+end
+
+; Procedure that reports all edges that composes a route
+to-report get-edges [given-route]
+  ; We conect each node with the next-one node of the given route
+  let desplaced-route (lput (first given-route) (but-first given-route))
+  report link-set (map [[n1 n2] -> (link ([who] of n1) ([who] of n2))] given-route desplaced-route)
+end
+
+
+; Procedure to visualizate ants travelling
+to travel-route [city]
+  ; We remove the first one (anthill)
+  let to-visit (remove-item 0 city)
+  let next item 0 to-visit
+
+  ; Visit each city
+  while [not empty? to-visit] [
+    face next
+
+    ; Walk till the next node
+    while [distance next >= 0.05] [fd 0.015]
+    set to-visit (remove-item 0 to-visit)
+    if not empty? to-visit
+      [set next item 0 to-visit]
+  ]
+end
 @#$#@#$#@
 GRAPHICS-WINDOW
 44
 162
 807
-801
+776
 -1
 -1
 6.24
@@ -90,24 +366,24 @@ GRAPHICS-WINDOW
 1
 1
 0
-1
-1
+0
+0
 1
 -60
 60
--50
-50
+-48
+48
 0
 0
 1
 ticks
-30.0
+60.0
 
 BUTTON
-85
-22
-158
-55
+32
+19
+114
+52
 setup
 setup
 NIL
@@ -121,13 +397,175 @@ NIL
 1
 
 SWITCH
-195
-24
-360
-57
+122
+20
+287
+53
 label-provinces
 label-provinces
+1
+1
+-1000
+
+SLIDER
+403
+23
+576
+56
+ants-population-size
+ants-population-size
 0
+100
+30.0
+1
+1
+NIL
+HORIZONTAL
+
+SLIDER
+300
+21
+392
+54
+alpha
+alpha
+0
+20
+1.0
+1
+1
+NIL
+HORIZONTAL
+
+SLIDER
+300
+58
+393
+91
+beta
+beta
+0
+20
+3.0
+1
+1
+NIL
+HORIZONTAL
+
+SLIDER
+300
+96
+394
+129
+rho
+rho
+0
+0.99
+0.25
+0.01
+1
+NIL
+HORIZONTAL
+
+BUTTON
+34
+97
+115
+145
+go
+go
+T
+1
+T
+OBSERVER
+NIL
+NIL
+NIL
+NIL
+1
+
+SWITCH
+122
+58
+288
+91
+show-pheromone
+show-pheromone
+1
+1
+-1000
+
+SLIDER
+404
+61
+577
+94
+num-provinces
+num-provinces
+2
+47
+32.0
+1
+1
+NIL
+HORIZONTAL
+
+BUTTON
+33
+58
+114
+91
+reset
+reset
+NIL
+1
+T
+OBSERVER
+NIL
+NIL
+NIL
+NIL
+1
+
+MONITOR
+476
+110
+578
+155
+Best Route
+best-route-cost
+2
+1
+11
+
+PLOT
+586
+16
+817
+157
+Route Cost
+Time
+Cost
+0.0
+10.0
+0.0
+10.0
+true
+true
+"" ""
+PENS
+"best" 1.0 0 -2674135 true "" "plot min [cost] of ants"
+"avg" 1.0 0 -12087248 true "" "plot mean [cost] of ants"
+"worst" 1.0 0 -13345367 true "" "plot max [cost] of ants"
+
+SWITCH
+122
+97
+288
+130
+show-ants
+show-ants
+1
 1
 -1000
 
@@ -177,6 +615,19 @@ airplane
 true
 0
 Polygon -7500403 true true 150 0 135 15 120 60 120 105 15 165 15 195 120 180 135 240 105 270 120 285 150 270 180 285 210 270 165 240 180 180 285 195 285 165 180 105 180 60 165 15
+
+ant
+true
+0
+Polygon -7500403 true true 136 61 129 46 144 30 119 45 124 60 114 82 97 37 132 10 93 36 111 84 127 105 172 105 189 84 208 35 171 11 202 35 204 37 186 82 177 60 180 44 159 32 170 44 165 60
+Polygon -7500403 true true 150 95 135 103 139 117 125 149 137 180 135 196 150 204 166 195 161 180 174 150 158 116 164 102
+Polygon -7500403 true true 149 186 128 197 114 232 134 270 149 282 166 270 185 232 171 195 149 186
+Polygon -7500403 true true 225 66 230 107 159 122 161 127 234 111 236 106
+Polygon -7500403 true true 78 58 99 116 139 123 137 128 95 119
+Polygon -7500403 true true 48 103 90 147 129 147 130 151 86 151
+Polygon -7500403 true true 65 224 92 171 134 160 135 164 95 175
+Polygon -7500403 true true 235 222 210 170 163 162 161 166 208 174
+Polygon -7500403 true true 249 107 211 147 168 147 168 150 213 150
 
 arrow
 true
