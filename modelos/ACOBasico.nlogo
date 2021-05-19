@@ -403,7 +403,7 @@ SWITCH
 53
 label-provinces
 label-provinces
-1
+0
 1
 -1000
 
@@ -491,7 +491,7 @@ SWITCH
 91
 show-pheromone
 show-pheromone
-1
+0
 1
 -1000
 
@@ -572,39 +572,158 @@ show-ants
 @#$#@#$#@
 ## WHAT IS IT?
 
-(a general understanding of what the model is trying to show or explain)
+**Ant Colony Optimization** is a computation technique/method inspired by the ants colective behaviour in their food search. This technique was proposed by M. Dorigo in 1992 [1]. It is can be applied to solve any optimization problem that can be reduced to finding minimal routes through graphs. 
+
+There are a population of agents called ants which construct a posible solution for our combinatorial problem iteratively. They use the environment to change information each other by depositing pheromones. 
+
+![aco-schema](images/ACO-schema.png)
+
+The used to start from an empty solution and then they are adding components for our solution until the candidate solution is completed. 
+
+After the solution is generated, the ants give feedback on the solutions they made by depositing an amount of pheromone on components they chosed to construct their solution. Those components that are in common at good solutions accumulate more pheromone and will more probably to be used by ants next iteration. 
+
+It also includes a mechanism for simulating the real pheromone evaporation which avoid to choose longer paths and to stuck at local optimums.
+
+Many actual problems like vehicle or internet routing are solved using this algorithms.
+In this model, I try to ilustrate the use of ACO on the **Traveling Salesman Problem**:
+
+![aco-tsp](images/ACO-TSP.png)
+
+The TSP problem can be represented by a graph G = (N, A) with N nodes (in this case, the provincial capitals of Spain) and A. the set of arcs that connect each node with the rest of them. The TSP can be formulated as the problem of finding the shortest Hamiltonian circuit that visit each node exactly once. 
+
+Almost all different ACO algorithms versions are tested with TSP (see [2]) because it is a well known problem (easy to understand by all of us) and can be more complex as the number of nodes increases (this is an NP-complete problem).
+
 
 ## HOW IT WORKS
 
-(what rules the agents use to create the overall behavior of the model)
+**Algorithm** (general pseudocode) [3]:
+
+```
+Initialize each arc with an initial amount of pheromone
+Create a population of ants
+Repeat until stop criteria:
+	For each ant:
+		Construct a solution using pheromones and cost of arcs
+	For each ant:
+		Deposit pheromones at those arcs included in the solution
+	Global Pheromone Evaporation Schema
+End
+Return the best founded solution
+	
+```
+
+
+**Edge selection** [4]:
+
+Each ant construct a candidate solution each iteration. The ant *k* make a choice at each node according to the **probability** associated with each node depending by the amount of pheromone and the length or cost (i.e the distance from the current node *x* to the next one *y*, where node *y* has not been visited yet). 
+
+![prob-selection](images/ACO-prob-selection.png)
+
+Alpha is a parameter to control the influence of the amount of pheromone deposited from the node x to y. 
+Beta is a parameter to control the influence of visibility of the node y from x. 
+The **visibility** is calculated as the inverse of the distance from x to y.  
+
+
+**Pheromone update** [4]:
+
+Edges are updated when all ants have construct their condidate solution. Each ant deposits an amount of pheromone in those edges that composes their solution. Also an evaporation mechanism is usually adopted to avoid longer paths and allow that those shorter paths to accumulate more pheromone. 
+
+A global pheromone updating schema is:
+
+![pheromone-1](images/ACO-pheromone-update1.png)
+
+Rho is a parameter that indicates the pheromone evaporation coefficient.
+The last term of the summation is the amount of pheromone deposited by the k-th ant
+for the edge that connect nodes x and y where:
+
+![pheromone-2](images/ACO-pheromone-update2.png)
+
+where Lk is the cost or length of the k-th ant's route and Q is a constant (in this model we consider Q = 100). 
+
 
 ## HOW TO USE IT
 
-(how to use the model, including a description of each of the items in the Interface tab)
+Press the SETUP button to create a random solution for the respective num-provinces (nodes). 
+
+Press the RESET button to resets all initial edges configuration (it also destroys all ants and clear the plots). This button allow the user to run several test with the same graph topology but with different initialization
+
+Press the GO button to start the simulation of the model. 
+
+=== Parameters ===
+
+The ANTS-POPULATION-SIZE slider controls the number of ants of our colony. 
+
+The NUM-PROVINCES slider controls the number of nodes (capitals of provinces) that we are going to consider to construct the solution. Notice that the location of the capital node is the centroid of the province and not the real location.
+
+The ALPHA slider controls the influcence for the ants of the pheromone on edges.
+
+The BETA slider controls the influence of the visibility heuristic (how greedy the ants are).
+
+The RHO slider controls the value of the global evaporation rate parameter.
+
+The LABEL-PROVINCES switch allows to visualizate the name of each capital (node).
+
+The SHOW-PHEROMONE switch allows to visualizate the amount/level of pheromone is deposited in each edge by the ants. There will be more pheromone on an edge which is thicker and less translucent than another one. 
+
+The SHOW-ANTS switch allows to visualizate the ants travelling the founded routes by each of them. When all ants arrived to the anthill (everyone has constructed their solution) the pheromone updating schema is applied.  
+
 
 ## THINGS TO NOTICE
 
-(suggested things for the user to notice while running the model)
+In the model, there is a graphic to show how the Ant Colony Optimization algorithm is performing. The "Route Cost" plot show the cost of the best, worst and average solutions throught each iteration. 
+
+There also are a monitor that specifies the value of the best founded route. 
 
 ## THINGS TO TRY
 
-(suggested things for the user to try to do (move sliders, switches, etc.) with the model)
+We can try to change the value of parameters alpha and beta, setting a value of zero to each of these to see how it influences the performing. If the value of alpha is 0, the algorithm should behave like a greedy because we are not taking pheromone information into account.
+
+We can also try to change the value of the parameter rho and visualizate the pheromone level to see how it can help the pheromone to stay longer or evaporate more quickly.
 
 ## EXTENDING THE MODEL
 
-(suggested things to add or change in the Code tab to make the model more complicated, detailed, accurate, etc.)
+There are many variants to improve the eficience of initial ACO algorithm, the most popular are:
+
+- **Elitist version**: The best founded solutions deposits an amount of pheromone on their paths every iteration. 
+
+- **Rank Ant System**: The solutions are ranked by their fitness or length. Each ant deposits an amount of pheromone proportionaly to the goodness of their solution.
+
+- **Max-Min Ant System**: Controls the maximun and minumum of pheromone on each arc. Only the global best solution are allowed to add pheromone. 
+
+- **Colony System**: The ejecution of the algorithm is not sincronized. The ants that have already constructed their solution can start another one without having to wait the rest of ants. 
 
 ## NETLOGO FEATURES
 
-(interesting or unusual features of NetLogo that the model uses, particularly in the Code tab; or where workarounds were needed for missing features)
+Using rnd extension, we add the ability to do roulette wheel selection. We use it in the next line of code:
 
-## RELATED MODELS
+```
+extensions [ rnd ]
 
-(models in the NetLogo Models Library and elsewhere which are of related interest)
+let next-node rnd:weighted-one-of remainder-nodes [weight-to-node current]
+```
 
-## CREDITS AND REFERENCES
+One agent from 'remainder-nodes' will be picked proportionaly to the weight (cost from the current node) that the reporter function 'weight-to-node' gives. 
 
-(a reference to the model's URL on the web if it has one, as well as any other necessary credits, citations, and links)
+
+
+## CREDITS
+
+This model is an implementation of Ant Colony Optimization for Travelling Salesman Problem using GIS data of provinces of Spain.
+
+It's a part of end-of-degree project -TFG- by Jose A. Martín Melguizo supervised by Rocio Romero Zaliz at the University Of Granada (UGR)
+
+Granada, 15 May, 2021
+
+
+## REFERENCES
+
+- [1] Dorigo, M., Maniezzo, V., and Colorni, A., The Ant System: Optimization by a colony of cooperating agents. IEEE Transactions on Systems, Man, and Cybernetics Part B: Cybernetics, Vol. 26, No. 1. (1996), pp. 29-41.
+
+- [2] Roach, Christopher (2007). NetLogo Ant System model. Computer Vision and Bio-inspired Computing Laboratory, Florida Institute of Technology, Melbourne, FL.
+
+- [3] https://www.cs.us.es/~fsancho/?e=71
+
+- [4] https://en.wikipedia.org/wiki/Ant_colony_optimization_algorithms
 @#$#@#$#@
 default
 true
@@ -924,7 +1043,7 @@ false
 Polygon -7500403 true true 270 75 225 30 30 225 75 270
 Polygon -7500403 true true 30 75 75 30 270 225 225 270
 @#$#@#$#@
-NetLogo 6.1.1
+NetLogo 6.2.0
 @#$#@#$#@
 @#$#@#$#@
 @#$#@#$#@
