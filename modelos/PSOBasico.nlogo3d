@@ -325,7 +325,7 @@ population-size
 population-size
 0
 100
-13.0
+18.0
 1
 1
 NIL
@@ -427,7 +427,7 @@ PLOT
 455
 502
 plot 1
-Generacion
+generation
 fitness
 0.0
 10.0
@@ -437,9 +437,9 @@ true
 true
 "" ""
 PENS
-"mean" 1.0 0 -10899396 true "" "plot mean [p-best-val] of particles"
-"max" 1.0 0 -2674135 true "" "plot max [p-best-val] of particles"
-"min" 1.0 0 -13791810 true "" "plot min [p-best-val] of particles"
+"mean" 1.0 0 -10899396 true "" "ifelse random-search-space\n[plot ( 1 / (mean [p-best-val] of particles))]\n[plot mean [p-best-val] of particles]"
+"best" 1.0 0 -2674135 true "" "ifelse random-search-space\n[plot ( 1 / (max [p-best-val] of particles))]\n[plot max [p-best-val] of particles]"
+"worst" 1.0 0 -13791810 true "" "ifelse random-search-space\n[plot ( 1 / (min [p-best-val] of particles))]\n[plot min [p-best-val] of particles]"
 
 SWITCH
 26
@@ -828,7 +828,7 @@ false
 Polygon -7500403 true true 270 75 225 30 30 225 75 270
 Polygon -7500403 true true 30 75 75 30 270 225 225 270
 @#$#@#$#@
-NetLogo 3D 6.0.4
+NetLogo 3D 6.2.0
 @#$#@#$#@
 need-to-manually-make-preview-for-this-model
 @#$#@#$#@

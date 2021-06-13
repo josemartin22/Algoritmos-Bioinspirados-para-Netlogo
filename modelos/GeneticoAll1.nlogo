@@ -92,7 +92,10 @@ to next-generation
     let child-bits []
     ifelse crossover-type? = "Cruce Uniforme"
       [set child-bits uniform-crossover ([bits] of (item 0 parents)) ([bits] of (item 1 parents))]
-    [set child-bits segment-crossover ([bits] of (item 0 parents)) ([bits] of (item 1 parents))]
+    [ ifelse crossover-type? = "Un punto"
+      [set child-bits one-point-crossover ([bits] of (item 0 parents)) ([bits] of (item 1 parents))]
+      [set child-bits two-point-crossover ([bits] of (item 0 parents)) ([bits] of (item 1 parents))]
+    ]
 
     ; create the two children, with their new genetic material
     ask item 0 parents [ hatch 1 [ set bits item 0 child-bits ] ]
@@ -142,7 +145,10 @@ to next-station
     let child-bits []
     ifelse crossover-type? = "Cruce Uniforme"
       [set child-bits uniform-crossover ([bits] of (item 0 parents)) ([bits] of (item 1 parents))]
-    [set child-bits segment-crossover ([bits] of (item 0 parents)) ([bits] of (item 1 parents))]
+    [ ifelse crossover-type? = "Un punto"
+      [set child-bits one-point-crossover ([bits] of (item 0 parents)) ([bits] of (item 1 parents))]
+      [set child-bits two-point-crossover ([bits] of (item 0 parents)) ([bits] of (item 1 parents))]
+    ]
 
     ; create the two children, with their new genetic material
     ask item 0 parents [ hatch 1 [ set bits item 0 child-bits ] ]
@@ -225,9 +231,37 @@ End
 ;; it puts together the first part of one list with the second part of
 ;; the other.
 
-;; Uniforme en un punto
+
+
+;; This reporter perform uniform-crossover on two lists of bits-
+;; It combines both parents lists and create two new solitions combining them.
 
 to-report uniform-crossover [bits1 bits2]
+
+  let tam (round (length bits1) / 2)
+  let descendant-1 bits1
+  let descendant-2 bits2
+
+  let i 0
+  while [i < tam] [
+
+    let gen (random (length bits1))
+    set descendant-1 (replace-item gen descendant-1 (item gen bits2))
+    set descendant-2 (replace-item gen descendant-2 (item gen bits1))
+
+    set i (i + 1)
+  ]
+
+  report (list descendant-1 descendant-2)
+
+end
+
+
+;; This reporter perform one-point crossover on two lists of bits.
+;; It choosers a dandom location and combines each parents to create
+;; two new solutions.
+
+to-report one-point-crossover [bits1 bits2]
   let split-point 1 + random (length bits1 - 1)
   report list (sentence (sublist bits1 0 split-point)
                         (sublist bits2 split-point length bits2))
@@ -236,12 +270,12 @@ to-report uniform-crossover [bits1 bits2]
 end
 
 
-;; This reporter performs one-segment crossover on one list of bits.
+;; This reporter performs one-segment crossover on two lists of bits.
 ;; It chooses a random location and a random size for creating a segment.
 ;; Then it reports a new list, we have to use this crossover two times to generate
 ;; 2 new solutions.
 
-to-report segment-crossover [bits1 bits2]
+to-report two-point-crossover [bits1 bits2]
 
   let childs []
 
@@ -606,8 +640,8 @@ CHOOSER
 356
 crossover-type?
 crossover-type?
-"Cruce Uniforme" "Segmento Fijo"
-0
+"Un punto" "Dos puntos" "Cruce Uniforme"
+2
 
 TEXTBOX
 153
@@ -702,9 +736,11 @@ A) There are two selection methods in this model:
 
 B) Either one or two parents are chosen to create children.  With one parent, the child is a clone or copy of the parent.  With two parents, the process is the digital analog of sexual recombination -- the two children inherit part of their genetic material from one parent and part from the other. There are two variants:
 
-- **Uniform crossover**: a cut (point) is selected on the first father or chromosome. All data beyond this point will be exchanged between the two fathers.
+- **One Point crossover**: a cut (point) is selected on the first father or chromosome. All data beyond this point will be exchanged between the two fathers.
 
-- **Segment crossover**: also known as Double Point Crossover (DPX). Instead of cutting the parental chromosomes at a single point as in the previous case, two cuts are randomly chosed. 
+- **Double Point crossover**: Instead of cutting the parental chromosomes at a single point as in the previous case, two cuts are randomly chosed. Both parents solutions are combined to create the new solutions. 
+
+- **Uniform crossover**: Both parents chromosomes are recombined choosing a random list of gens of one of them and the rest of them from the another chromosome.
 
 C) There is also a chance that mutation will occur, and some of the child's bits will be changed from "1"s to "0"s, or vice versa.
 
@@ -751,7 +787,6 @@ This model is based off of work by John H. Holland, who is widely regarded as th
 This model is a extension of:
 
 * Stonedahl, F. and Wilensky, U. (2008).  NetLogo Simple Genetic Algorithm model.  http://ccl.northwestern.edu/netlogo/models/SimpleGeneticAlgorithm.  Center for Connected Learning and Computer-Based Modeling, Northwestern University, Evanston, IL.
-
 
 
 
@@ -1040,7 +1075,7 @@ false
 Polygon -7500403 true true 270 75 225 30 30 225 75 270
 Polygon -7500403 true true 30 75 75 30 270 225 225 270
 @#$#@#$#@
-NetLogo 6.1.1
+NetLogo 6.2.0
 @#$#@#$#@
 need-to-manually-make-preview-for-this-model
 @#$#@#$#@
