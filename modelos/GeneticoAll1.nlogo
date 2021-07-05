@@ -789,8 +789,13 @@ This model is a extension of:
 * Stonedahl, F. and Wilensky, U. (2008).  NetLogo Simple Genetic Algorithm model.  http://ccl.northwestern.edu/netlogo/models/SimpleGeneticAlgorithm.  Center for Connected Learning and Computer-Based Modeling, Northwestern University, Evanston, IL.
 
 
+It's a part of end-of-degree project -TFG- by Jose A. Martín Melguizo supervised by Rocio Romero Zaliz at the University Of Granada (UGR)
 
+Granada, 14 February, 2021
 
+This work is licensed under the Creative Commons Attribution-NonCommercial-ShareAlike 4.0 License.  To view a copy of this license, visit https://creativecommons.org/licenses/by-nc-sa/4.0/ or send a letter to Creative Commons, 559 Nathan Abbott Way, Stanford, California 94305, USA.
+
+![CC BY-NC-SA 4.0](https://licensebuttons.net/l/by-nc-sa/3.0/88x31.png)
 
 @#$#@#$#@
 default

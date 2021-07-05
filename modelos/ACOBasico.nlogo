@@ -380,9 +380,9 @@ ticks
 60.0
 
 BUTTON
-32
+20
 19
-114
+102
 52
 setup
 setup
@@ -397,7 +397,7 @@ NIL
 1
 
 SWITCH
-122
+127
 20
 287
 53
@@ -468,10 +468,10 @@ NIL
 HORIZONTAL
 
 BUTTON
-34
-97
-115
-145
+67
+100
+122
+134
 go
 go
 T
@@ -485,13 +485,13 @@ NIL
 1
 
 SWITCH
-122
+128
 58
 288
 91
 show-pheromone
 show-pheromone
-0
+1
 1
 -1000
 
@@ -511,9 +511,9 @@ NIL
 HORIZONTAL
 
 BUTTON
-33
+21
 58
-114
+102
 91
 reset
 reset
@@ -559,15 +559,32 @@ PENS
 "worst" 1.0 0 -13345367 true "" "plot max [cost] of ants"
 
 SWITCH
-122
-97
+129
+98
 288
-130
+131
 show-ants
 show-ants
-1
+0
 1
 -1000
+
+BUTTON
+9
+101
+64
+134
+step
+go
+NIL
+1
+T
+OBSERVER
+NIL
+NIL
+NIL
+NIL
+1
 
 @#$#@#$#@
 ## WHAT IS IT?
@@ -713,6 +730,10 @@ This model is an implementation of Ant Colony Optimization for Travelling Salesm
 It's a part of end-of-degree project -TFG- by Jose A. Martín Melguizo supervised by Rocio Romero Zaliz at the University Of Granada (UGR)
 
 Granada, 15 May, 2021
+
+This work is licensed under the Creative Commons Attribution-NonCommercial-ShareAlike 4.0 License.  To view a copy of this license, visit https://creativecommons.org/licenses/by-nc-sa/4.0/ or send a letter to Creative Commons, 559 Nathan Abbott Way, Stanford, California 94305, USA.
+
+![CC BY-NC-SA 4.0](https://licensebuttons.net/l/by-nc-sa/3.0/88x31.png)
 
 
 ## REFERENCES

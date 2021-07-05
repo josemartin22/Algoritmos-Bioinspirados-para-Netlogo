@@ -517,7 +517,21 @@ When the value it's 1.0 the particle's velocities never change.
 
 Simple Genetic Algorithm, Artificial Neural Net, Perceptron, Hill Climbing Example (Code Example).
 
-## CREDITS AND REFERENCES
+## CREDITS
+
+This model tries to show the behaviour of a particle swarm optimization algorithm.
+
+It's a part of end-of-degree project -TFG- by Jose A. Martín Melguizo supervised by Rocio Romero Zaliz at the University Of Granada (UGR)
+
+Granada, 31 March, 2021
+
+
+This work is licensed under the Creative Commons Attribution-NonCommercial-ShareAlike 4.0 License.  To view a copy of this license, visit https://creativecommons.org/licenses/by-nc-sa/4.0/ or send a letter to Creative Commons, 559 Nathan Abbott Way, Stanford, California 94305, USA.
+
+![CC BY-NC-SA 4.0](https://licensebuttons.net/l/by-nc-sa/3.0/88x31.png)
+
+
+## REFERENCES
 
 * Based on the algorithm presented in the following paper: Kennedy, J. & Eberhart, R. (1995), 'Particle swarm optimization', Neural Networks, 1995. Proceedings., IEEE International Conference on 4.
 
