@@ -249,9 +249,9 @@ SLIDER
 251
 swarm-population-size
 swarm-population-size
-0
+1
 200
-80.0
+141.0
 1
 1
 NIL

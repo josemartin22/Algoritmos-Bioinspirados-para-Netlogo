@@ -295,7 +295,7 @@ SWITCH
 104
 random-search-space
 random-search-space
-0
+1
 1
 -1000
 
@@ -323,9 +323,9 @@ SLIDER
 81
 population-size
 population-size
-0
+1
 100
-18.0
+5.0
 1
 1
 NIL
@@ -370,7 +370,7 @@ attraction-to-personal-best
 attraction-to-personal-best
 0
 2
-1.9
+2.0
 0.1
 1
 NIL
@@ -384,8 +384,8 @@ SLIDER
 attraction-to-global-best
 attraction-to-global-best
 0
-2
-1.5
+2.5
+2.0
 0.1
 1
 NIL
@@ -427,7 +427,7 @@ PLOT
 455
 502
 plot 1
-generation
+iteration
 fitness
 0.0
 10.0
@@ -438,8 +438,8 @@ true
 "" ""
 PENS
 "mean" 1.0 0 -10899396 true "" "ifelse random-search-space\n[plot ( 1 / (mean [p-best-val] of particles))]\n[plot mean [p-best-val] of particles]"
-"best" 1.0 0 -2674135 true "" "ifelse random-search-space\n[plot ( 1 / (max [p-best-val] of particles))]\n[plot max [p-best-val] of particles]"
-"worst" 1.0 0 -13791810 true "" "ifelse random-search-space\n[plot ( 1 / (min [p-best-val] of particles))]\n[plot min [p-best-val] of particles]"
+"best" 1.0 0 -2674135 true "" "ifelse random-search-space\n[plot ( 1 / (max [p-best-val] of particles))]\n[plot min [p-best-val] of particles]"
+"worst" 1.0 0 -13791810 true "" "ifelse random-search-space\n[plot ( 1 / (min [p-best-val] of particles))]\n[plot max [p-best-val] of particles]"
 
 SWITCH
 26
